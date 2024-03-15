@@ -1,81 +1,89 @@
+const API_KEY = "YOUR_API_KEY"; // JootoのAPIキーを設定
+
 function onFormSubmit(e) {
-    // フォームからのユーザー入力を取得する
-    const userInput = GetUserInput(e);
+  // フォームからのユーザー入力を取得する
+  const userInput = GetUserInput(e);
+  
+  // OpenAI APIを使用してプロジェクトテンプレートを生成する(csv)
+  const projectTemplate = GenerateProjectTemplate(userInput);
+  
+  // プロジェクトテンプレート(csv)からJootoにプロジェクト、リスト、タスクを作成する
+  CreateJootoProject(projectTemplate, userInput.projectName, userInput.projectOverview);
+}
+
+/**
+ * ユーザー入力を取得する関数
+ * @param {object} e フォーム送信イベントオブジェクト
+ * @return {object} プロジェクト名とプロジェクト概要を含むオブジェクト
+ */
+function GetUserInput(e) {
+  // フォームの回答を取得
+  const formResponse = e.response;
+  
+  // 回答からプロジェクト名とプロジェクト概要を抽出
+  const itemResponses = formResponse.getItemResponses();
+  const projectName = itemResponses[0].getResponse();
+  const projectOverview = itemResponses[1].getResponse();
+  
+  // 抽出した情報をオブジェクトとして返す
+  return {projectName: projectName, projectOverview: projectOverview};
+}
+
+/**
+ * OpenAI APIを使用してプロジェクトテンプレートを生成する関数
+ * @param {object} userInput ユーザー入力オブジェクト
+ * @return {string} プロジェクトテンプレートのCSV文字列
+ */
+function GenerateProjectTemplate(userInput) {
+  // ファインチューニングしたOpenAI APIにユーザー入力を送信
+  // csv形式のプロジェクトテンプレートを生成
+  // 生成されたプロジェクトテンプレートを返す
+}
+
+/**
+ * プロジェクトテンプレートからJootoにプロジェクト、リスト、タスクを作成する関数
+ * @param {string} csvString プロジェクトテンプレートのCSV文字列
+ * @param {string} projectName プロジェクト名
+ * @param {string} projectOverview プロジェクトの概要
+ */
+function CreateJootoProject(csvString, projectName, projectOverview) {
+  // Jooto APIを使用してプロジェクトを作成
+  const projectId = addProject(API_KEY, projectName, {description: projectOverview}).data.id;
+  
+  // CSVをパースしてリストとタスクを作成
+  const rows = Utilities.parseCsv(csvString);
+  const lists = {};
+  
+  for (let i = 1; i < rows.length; i++) {
+    const [listName, taskName, description, status, label, assignee, startDate, startTime, dueDate, dueTime, plan, actual, checklistName, itemName, itemCompleted, itemAssignee, itemStartDate, itemStartTime, itemDueDate, itemDueTime] = rows[i];
     
-    // OpenAI APIを使用してプロジェクトテンプレートを生成する(csv)
-    const projectTemplate = GenerateProjectTemplate(userInput);
+    // リストが存在しない場合は作成
+    if (!lists[listName]) {
+      const listId = addList(API_KEY, listName, projectId, "#000000").data.id;
+      lists[listName] = listId;
+    }
     
-    // プロジェクトテンプレート(csv)からJootoにプロジェクト、リスト、タスクを作成する
-    CreateJootoProject(projectTemplate);
-  }
-  
-  /**
-   * ユーザー入力を取得する関数
-   * @param {object} e フォーム送信イベントオブジェクト
-   * @return {object} プロジェクト名とプロジェクト概要を含むオブジェクト
-   */
-  function GetUserInput(e) {
-    // フォームの回答を取得
-    const formResponse = e.response;
+    // タスクを作成
+    const listId = lists[listName];
+    const additionalData = {
+      description: description,
+      assigned_user_ids: [assignee],
+      start_date_time: startDate + " " + startTime,
+      deadline_date_time: dueDate + " " + dueTime
+    };
+    const taskId = addTask(API_KEY, projectId, listId, taskName, additionalData).data.id;
     
-    // 回答からプロジェクト名とプロジェクト概要を抽出
-    const itemResponses = formResponse.getItemResponses();
-    const projectName = itemResponses[0].getResponse();
-    const projectOverview = itemResponses[1].getResponse();
-    
-    // 抽出した情報をオブジェクトとして返す
-    return {projectName: projectName, projectOverview: projectOverview};
+    // チェックリストとアイテムを作成
+    if (checklistName) {
+      const checklistId = createJootoCheckList_(API_KEY, taskId, checklistName).data.id;
+      if (itemName) {
+        const additionalData = {
+          assigned_user_ids: [itemAssignee],
+          start_date_time: itemStartDate + " " + itemStartTime,
+          deadline_date_time: itemDueDate + " " + itemDueTime
+        };
+        addItem(API_KEY, checklistId, itemName, additionalData);
+      }
+    }
   }
-  
-  /**
-   * OpenAI APIを使用してプロジェクトテンプレートを生成する関数
-   * @param {object} userInput ユーザー入力オブジェクト
-   * @return {array} プロジェクトテンプレートのCSVデータを表す２次元配列
-   */
-  function GenerateTemplate(userInput) {
-    // ファインチューニングしたOpenAI APIにユーザー入力を送信
-    // csv形式のプロジェクトテンプレートを生成
-    // 生成されたプロジェクトテンプレートを返す
-  }
-  
-  /**
-   * プロジェクトテンプレートからJootoにプロジェクト、リスト、タスクを作成する関数
-   * @param {array} projectTemplate プロジェクトテンプレートのCSVデータを表す２次元配列
-   */
-  function CreateJootoProject(projectTemplate) {
-    // プロジェクトテンプレートからプロジェクト情報を抽出し、Jooto APIを使用してプロジェクトを作成
-    // プロジェクトテンプレートからリスト情報を抽出し、Jooto APIを使用してリストを作成
-    // プロジェクトテンプレートからタスク情報を抽出し、Jooto APIを使用してタスクを作成
-  }
-  
-  /**
-   * Jooto APIを使用してプロジェクトを作成する関数
-   * @param {object} projectData プロジェクト情報を含むオブジェクト
-   * @return {string} projectId 作成されたプロジェクトのID
-   */
-  function CreateProjectViaAPI(projectData) {
-    // Jooto APIのエンドポイント（POST /v1/boards）に、projectDataをペイロードとしてPOSTリクエストを送信
-    // 作成されたプロジェクトのIDを返す
-  }
-  
-  /**
-   * Jooto APIを使用してリストを作成する関数
-   * @param {string} projectId プロジェクトID
-   * @param {object} listData リスト情報を含むオブジェクト
-   * @return {string} 作成されたリストのID
-   */
-  function CreateListViaAPI(projectId, listData) {
-    // Jooto APIのエンドポイント（POST /v1/boards/{id}/lists）に、listDataをペイロードとしてPOSTリクエストを送信
-    // 作成されたリストのIDを返す
-  }
-  
-  /**
-   * Jooto APIを使用してタスクを作成する関数
-   * @param {string} projectId プロジェクトID
-   * @param {object} taskData タスク情報を含むオブジェクト
-   * @return {string} 作成されたタスクのID
-   */
-  function CreateTaskViaAPI(projectId, taskData) {
-    // Jooto APIのエンドポイント（POST /v1/boards/{id}/tasks）に、taskDataをペイロードとしてPOSTリクエストを送信
-    // 作成されたタスクのIDを返す
-  }
+}
