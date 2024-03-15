@@ -1,6 +1,14 @@
 {
   "timeZone": "Asia/Tokyo",
   "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "JootoAPI",
+        "version": "0",
+        "libraryId": "1Oq0MF6WiHjb2_qyesLfKcNjwpmyJ3IAMm_SIEVsRymYzRgwA9uINBeAC",
+        "developmentMode": true
+      }
+    ]
   },
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8"

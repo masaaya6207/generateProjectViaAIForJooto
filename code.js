@@ -127,3 +127,76 @@ function main() {
     
     CreateJootoProject(csvString, projectName, projectOverview);
   }
+
+  /**
+ * プロジェクトに所属するメンバーの一覧を取得する関数
+ * @param {string} apiKey - APIキー
+ * @param {number} boardId - プロジェクトのID
+ * @param {object} [options] - オプションパラメータ
+ * @param {string} [options.order] - ソート順（"asc"または"desc"）
+ * @param {string} [options.orderBy] - ソートするカラム（"id"または"name"）
+ * @param {number} [options.perPage] - 1ページあたりの取得件数
+ * @param {number} [options.page] - 取得したいページ番号
+ * @returns {object} レスポンスデータ
+ */
+function getMembers(apiKey = "8145158eb33cd7ba38fee487364aacbb", boardId = "1058013", options = {}) {
+    let apiUrl = `https://api.jooto.com/v1/boards/${boardId}/users?`;
+    
+    if (options.order) {
+      apiUrl += `order=${options.order}&`;
+    }
+    
+    if (options.orderBy) {
+      apiUrl += `order_by=${options.orderBy}&`;
+    }
+    
+    if (options.perPage) {
+      apiUrl += `per_page=${options.perPage}&`;
+    }
+    
+    if (options.page) {
+      apiUrl += `page=${options.page}&`;
+    }
+    
+    // 末尾の&を取り除く
+    apiUrl = apiUrl.slice(0, -1);
+    
+    const option = makeGetOption(apiKey);
+    const response = jsonRequest(apiUrl, option);
+    Logger.log(response);
+    return response;
+  }
+
+  /** 
+ * GETリクエストのoptionを作る関数
+ * @param {string} apiKey -  APIKey
+ * @returns {json} -  option
+*/
+function makeGetOption(apiKey){
+  const headers = {
+    'X-Jooto-Api-Key': apiKey
+  };
+  let option = {
+    'method': 'GET',
+    'headers': headers,
+    'muteHttpExceptions': true
+  };
+  return option;
+}
+
+/** Get or Postリクエストでresponseを取得し、json式に変換する関数
+ * @param {string} apiUrl - APIのURL
+ * @param {json} option_or_params -  GETならoption、POSTならparams
+ * @returns {json} response -  codeにレスポンスコード、dataにレスポンスボディ
+*/
+function jsonRequest(apiUrl,option_or_params){
+  const response = UrlFetchApp.fetch(apiUrl, option_or_params);
+  Utilities.sleep(500);
+  const responseCode = response.getResponseCode();
+  const responseText = response.getContentText();
+  const responseData = JSON.parse(responseText);
+  return {
+    "code" : responseCode,
+    "data" : responseData
+  };
+}
