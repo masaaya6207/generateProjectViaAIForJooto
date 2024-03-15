@@ -1,4 +1,4 @@
-const API_KEY = "f53e4546b0042f0aae00fc795d59f01e"; // JootoのAPIキーを設定
+const API_KEY = "8145158eb33cd7ba38fee487364aacbb"; // JootoのAPIキーを設定
 
 function onFormSubmit(e) {
   // フォームからのユーザー入力を取得する
@@ -48,7 +48,7 @@ function GenerateProjectTemplate(userInput) {
  */
 function CreateJootoProject(csvString, projectName, projectOverview) {
   // Jooto APIを使用してプロジェクトを作成
-  const projectId = addProject(API_KEY, projectName, {description: projectOverview}).data.id;
+  const projectId = JootoAPI.addProject(API_KEY, projectName, {description: projectOverview}).data.id;
   
   // CSVをパースしてリストとタスクを作成
   const rows = Utilities.parseCsv(csvString);
@@ -59,7 +59,7 @@ function CreateJootoProject(csvString, projectName, projectOverview) {
     
     // リストが存在しない場合は作成
     if (!lists[listName]) {
-      const listId = addList(API_KEY, listName, projectId, "#000000").data.id;
+      const listId = JootoAPI.addList(API_KEY, listName, projectId, "#000000").data.id;
       lists[listName] = listId;
     }
     
@@ -71,7 +71,7 @@ function CreateJootoProject(csvString, projectName, projectOverview) {
       start_date_time: startDate + " " + startTime,
       deadline_date_time: dueDate + " " + dueTime
     };
-    const taskId = addTask(API_KEY, projectId, listId, taskName, additionalData).data.id;
+    const taskId = JootoAPI.addTask(API_KEY, projectId, listId, taskName, additionalData).data.id;
     
     // チェックリストとアイテムを作成
     if (checklistName) {
@@ -127,6 +127,32 @@ function main() {
     
     CreateJootoProject(csvString, projectName, projectOverview);
   }
+
+/**
+ * プロジェクトにメンバーを追加する関数
+ * @param {string} apiKey - APIキー
+ * @param {number} boardId - プロジェクトのID
+ * @param {number[]} userIds - 追加するメンバーのユーザーIDの配列
+ * @param {string} role - メンバーの役割（"owner", "normal"）
+ * @returns {object} レスポンスデータ
+ */
+function addMember(apiKey, boardId, userIds, role) {
+  const apiUrl = `https://api.jooto.com/v1/boards/${boardId}/users`;
+  
+  const users = userIds.map(userId => ({
+    id: userId,
+    role: role
+  }));
+  
+  const list = {
+    users: users
+  };
+  
+  const params = makePOSTParams(apiKey, list);
+  const response = jsonRequest(apiUrl, params);
+  
+  return response;
+}
 
   /**
  * プロジェクトに所属するメンバーの一覧を取得する関数
